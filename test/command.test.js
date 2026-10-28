@@ -291,6 +291,37 @@ test('an explicit config thinking level overrides the inherited one', async () =
   assert.equal(calls[0].reasoningEffort, 'low')
 })
 
+test('adopts the profile default level when the session route carries none', async () => {
+  const { runtime, calls } = fakeRuntime({
+    selection: { provider: 'tokenhub', model: 'deepseek-v4.1-flash-1017', reasoningEffort: 'max' },
+  })
+  const { agent } = fakeAgent()
+  handleBtwInvocation(runtime, invocation(agent, 'hi there?'))
+  await runtime.answers.whenIdle()
+  assert.equal(calls[0].reasoningEffort, 'max')
+})
+
+test('ignores the profile default level for a different model', async () => {
+  const { runtime, calls } = fakeRuntime({
+    selection: { provider: 'tokenhub', model: 'some-other-model', reasoningEffort: 'max' },
+  })
+  const { agent } = fakeAgent()
+  handleBtwInvocation(runtime, invocation(agent, 'hi there?'))
+  await runtime.answers.whenIdle()
+  assert.equal('reasoningEffort' in calls[0], false)
+})
+
+test('a config level still overrides the profile default level', async () => {
+  const { runtime, calls } = fakeRuntime({
+    config: { reasoningEffort: 'low' },
+    selection: { provider: 'tokenhub', model: 'deepseek-v4.1-flash-1017', reasoningEffort: 'max' },
+  })
+  const { agent } = fakeAgent()
+  handleBtwInvocation(runtime, invocation(agent, 'hi there?'))
+  await runtime.answers.whenIdle()
+  assert.equal(calls[0].reasoningEffort, 'low')
+})
+
 test('a route without a thinking level leaves the adapter default in place', async () => {
   const { runtime, calls } = fakeRuntime()
   const { agent } = fakeAgent()
