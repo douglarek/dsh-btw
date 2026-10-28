@@ -21,7 +21,8 @@
         # Per-tool-result cap inside that transcript.
         maxToolResultChars: 1200
         includeToolResults: true
-        # Side request tuning; provider/model/reasoningEffort stay unset to
-        # follow the session's own route and the adapter defaults.
+        # Side request tuning. provider/model/reasoningEffort stay unset so the
+        # side request runs the session's own route: its model and the thinking
+        # level the main turn uses. Set reasoningEffort to override that level.
         timeoutMs: 120000
         temperature: 0.2

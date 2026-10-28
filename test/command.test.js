@@ -11,7 +11,7 @@ function text(value) {
   return { type: 'text', text: value }
 }
 
-function fakeRuntime({ stream, selection, config } = {}) {
+function fakeRuntime({ stream, selection, projections, config } = {}) {
   const calls = []
   const services = {
     llm: {
@@ -23,6 +23,7 @@ function fakeRuntime({ stream, selection, config } = {}) {
       },
     },
     ...(selection === undefined ? {} : { agentDefaultModel: { currentSelection: () => selection } }),
+    ...(projections === undefined ? {} : { sessionProjections: projections }),
   }
   const ctx = {
     get(name) {
@@ -236,6 +237,76 @@ test('reports a missing route instead of throwing', () => {
   const agent = { id: 'session-3', session: { requestHeader: () => undefined } }
   const { runtime } = fakeRuntime()
   assert.throws(() => resolveRoute(runtime.ctx, agent, runtime.config), /no model route yet/)
+})
+
+test('the session selection outranks the last request route', async () => {
+  const { runtime, calls } = fakeRuntime({
+    projections: {
+      stateOf: () => ({ lastUsed: { provider: 'tokenhub', model: 'old-model', reasoningEffort: 'low' }, pending: { provider: 'cpa', model: 'gpt-6-sol', reasoningEffort: 'high' } }),
+    },
+    selection: { provider: 'fallback', model: 'default-model' },
+  })
+  const { agent } = fakeAgent({ header: { config: { provider: 'tokenhub', model: 'deepseek-v4.1-flash-1017', reasoningEffort: 'max' } } })
+  handleBtwInvocation(runtime, invocation(agent, 'hi there?'))
+  await runtime.answers.whenIdle()
+  assert.equal(calls[0].provider, 'cpa')
+  assert.equal(calls[0].model, 'gpt-6-sol')
+  assert.equal(calls[0].reasoningEffort, 'high')
+})
+
+test('an empty pending selection falls back to the last-used one', async () => {
+  const { runtime, calls } = fakeRuntime({
+    projections: { stateOf: () => ({ lastUsed: { provider: 'tokenhub', model: 'deepseek-v4.1-flash-1017', reasoningEffort: 'max' }, pending: null }) },
+  })
+  const { agent } = fakeAgent()
+  handleBtwInvocation(runtime, invocation(agent, 'hi there?'))
+  await runtime.answers.whenIdle()
+  assert.equal(calls[0].reasoningEffort, 'max')
+})
+
+test('an unavailable or broken selection projection falls back to the header', async () => {
+  for (const projections of [undefined, { stateOf: () => undefined }, { stateOf: () => { throw new Error('no such key') } }]) {
+    const { runtime, calls } = fakeRuntime({ projections })
+    const { agent } = fakeAgent({ header: { config: { provider: 'tokenhub', model: 'deepseek-v4.1-flash-1017', reasoningEffort: 'max' } } })
+    handleBtwInvocation(runtime, invocation(agent, 'hi there?'))
+    await runtime.answers.whenIdle()
+    assert.equal(calls[0].provider, 'tokenhub')
+    assert.equal(calls[0].reasoningEffort, 'max')
+  }
+})
+
+test('inherits the thinking level the session runs', async () => {
+  const { runtime, calls } = fakeRuntime()
+  const { agent } = fakeAgent({ header: { config: { provider: 'tokenhub', model: 'deepseek-v4.1-flash-1017', reasoningEffort: 'max' } } })
+  handleBtwInvocation(runtime, invocation(agent, 'hi there?'))
+  await runtime.answers.whenIdle()
+  assert.equal(calls[0].reasoningEffort, 'max')
+})
+
+test('an explicit config thinking level overrides the inherited one', async () => {
+  const { runtime, calls } = fakeRuntime({ config: { reasoningEffort: 'low' } })
+  const { agent } = fakeAgent({ header: { config: { provider: 'tokenhub', model: 'deepseek-v4.1-flash-1017', reasoningEffort: 'max' } } })
+  handleBtwInvocation(runtime, invocation(agent, 'hi there?'))
+  await runtime.answers.whenIdle()
+  assert.equal(calls[0].reasoningEffort, 'low')
+})
+
+test('a route without a thinking level leaves the adapter default in place', async () => {
+  const { runtime, calls } = fakeRuntime()
+  const { agent } = fakeAgent()
+  handleBtwInvocation(runtime, invocation(agent, 'hi there?'))
+  await runtime.answers.whenIdle()
+  assert.equal('reasoningEffort' in calls[0], false)
+})
+
+test('inherits the thinking level from the default selection before the first request', async () => {
+  const { runtime, calls } = fakeRuntime({ selection: { provider: 'fallback', model: 'default-model', reasoningEffort: 'high' } })
+  const { agent } = fakeAgent()
+  agent.session.requestHeader = () => undefined
+  handleBtwInvocation(runtime, invocation(agent, 'hi there?'))
+  await runtime.answers.whenIdle()
+  assert.equal(calls[0].provider, 'fallback')
+  assert.equal(calls[0].reasoningEffort, 'high')
 })
 
 test('an explicit config route wins over the session route', async () => {

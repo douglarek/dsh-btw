@@ -45,7 +45,7 @@ Every key has a code default; the values in `cordis.patch.yml` are those default
 | `timeoutMs` | `120000` | Bound on one side request; `0` is rejected. |
 | `temperature` | `0.2` | Sampling temperature for the side request. |
 | `maxTokens` | unset | Optional output bound for the side request. |
-| `reasoningEffort` | unset | Optional reasoning effort. Unset follows the provider adapter's default instead of inheriting the main turn's effort, so an aside stays cheap. |
+| `reasoningEffort` | unset | Optional override of the thinking level. Unset inherits the level the session itself runs: its current model selection, then its latest request route, then the profile's default model selection. |
 | `provider`, `model` | unset | Optional pinned route. Unset uses the session's latest request route, then the profile's default model. Supply both together. |
 
 ## How it differs from a prompt
@@ -60,7 +60,7 @@ Every key has a code default; the values in `cordis.patch.yml` are those default
 
 ## How it works
 
-- **Host** (`index.js`, `lib/`): registers the `btw` command with `ctx.commands.register()`. The handler runs outside any turn and returns at once: the composer keeps a claimed command's line until its handler returns, so awaiting the model there would hold the user's draft for the whole request. `lib/answer-runner.js` then resolves the route from `session.requestHeader()` (falling back to `ctx.agentDefaultModel`), streams one `ctx.llm.stream()` request with a fixed side-question policy and no tools, and settles the same row by appending `command/done` for the run's `commandId`. Under `context: session` it first flattens `session.deriveMessages()` into a text-only transcript; under the default `none` the request is the question alone. `llm` and `commands` are hard injections, so the plugin stays inactive in a profile without them.
+- **Host** (`index.js`, `lib/`): registers the `btw` command with `ctx.commands.register()`. The side request runs the session's own route — its provider, model, and reasoning effort — so an aside answers at the same thinking level as the main turn. The handler runs outside any turn and returns at once: the composer keeps a claimed command's line until its handler returns, so awaiting the model there would hold the user's draft for the whole request. `lib/answer-runner.js` then resolves the route from the session's current model selection (falling back to `session.requestHeader()`, then `ctx.agentDefaultModel`), streams one `ctx.llm.stream()` request with a fixed side-question policy and no tools, and settles the same row by appending `command/done` for the run's `commandId`. Under `context: session` it first flattens `session.deriveMessages()` into a text-only transcript; under the default `none` the request is the question alone. `llm` and `commands` are hard injections, so the plugin stays inactive in a profile without them.
 - **Client** (`client.js`): registers `conversation.chat.commandview` under the key `btw`, the keyed slot the Chat view dispatches by command name. The component renders the question on the disclosure line and the answer as Markdown through a small block/inline parser this bundle owns (the host's Markdown component is not importable from a plugin); theming uses only `--dsw-alias-*` tokens, and text comes from the plugin's own locale namespace.
 
 ## Limitations
