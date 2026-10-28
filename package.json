@@ -1,6 +1,6 @@
 {
   "name": "dsh-btw",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Side questions for DeepSeek Harness: /btw answers without interrupting the running turn, using the session's own model and conversation.",
   "type": "module",
   "main": "./index.js",

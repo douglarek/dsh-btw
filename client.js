@@ -25,9 +25,11 @@ window.__ModuleLoader__.load({
 
     const EN = {
       'btw.answering': 'Answering…',
+      'btw.reasoning': 'Thinking',
     }
     const ZH = {
       'btw.answering': '正在回答…',
+      'btw.reasoning': '思考过程',
     }
 
     const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
@@ -82,6 +84,36 @@ window.__ModuleLoader__.load({
   overflow-wrap: anywhere;
 }
 .dshBtw-body[data-error='true'] { color: var(--dsw-alias-state-error-primary); }
+.dshBtw-reasoning { display: flex; flex-direction: column; gap: 4px; }
+.dshBtw-reasoningToggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+.dshBtw-reasoningToggle:hover { color: var(--dsw-alias-label-secondary); }
+.dshBtw-reasoningToggle:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; border-radius: 2px; }
+.dshBtw-chevronSmall { width: 12px; height: 12px; margin: 0; }
+.dshBtw-reasoningToggle[aria-expanded='true'] .dshBtw-chevronSmall { transform: rotate(180deg); }
+.dshBtw-reasoningBody {
+  padding-left: 10px;
+  border-left: 2px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 320px;
+  overflow: auto;
+}
 .dshBtw-body > * + * { margin-top: 8px; }
 .dshBtw-text { white-space: pre-wrap; }
 .dshBtw-h { font-weight: 600; line-height: 1.4; }
@@ -153,6 +185,24 @@ window.__ModuleLoader__.load({
       }),
     )
 
+    const REASONING_CHEVRON = h(
+      'svg',
+      {
+        className: 'dshBtw-chevron dshBtw-chevronSmall',
+        viewBox: '0 0 16 16',
+        'aria-hidden': 'true',
+        focusable: 'false',
+      },
+      h('path', {
+        d: 'M4 6.25 8 10.25 12 6.25',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.3,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+      }),
+    )
+
     const FENCE = /^\s*```(.*)$/
     const FENCE_CLOSE = /^\s*```\s*$/
     const HEADING = /^(#{1,6})\s+(.*)$/
@@ -186,6 +236,26 @@ window.__ModuleLoader__.load({
         .replace(/\|$/, '')
         .split('|')
         .map((cell) => cell.trim())
+    }
+
+    /**
+     * Split a settled row into the reasoning block and the answer.
+     *
+     * The Host sends one string through `command/done`, wrapping the reasoning
+     * between two marker lines; text without markers is the answer itself.
+     *
+     * @param {string} text The settled command text.
+     * @returns {{ reasoning: string, answer: string }} the parts.
+     */
+    function splitResult(text) {
+      const value = typeof text === 'string' ? text : ''
+      const prefix = '<<<btw:reasoning>>>\n'
+      if (!value.startsWith(prefix)) return { reasoning: '', answer: value }
+      const rest = value.slice(prefix.length)
+      const marker = '\n<<<btw:answer>>>\n'
+      const at = rest.indexOf(marker)
+      if (at === -1) return { reasoning: '', answer: value }
+      return { reasoning: rest.slice(0, at), answer: rest.slice(at + marker.length).replace(/^\n/, '') }
     }
 
     /**
@@ -448,14 +518,16 @@ window.__ModuleLoader__.load({
       const question = typeof node?.args === 'string' ? node.args.trim() : ''
       const outcome = node?.outcome ?? null
       const failed = outcome !== null && outcome.kind === 'error'
-      const answer = typeof outcome?.text === 'string' ? outcome.text : ''
+      const raw = typeof outcome?.text === 'string' ? outcome.text : ''
+      const { reasoning, answer } = React.useMemo(() => splitResult(raw), [raw])
       // The Host settles the submission before the model answers, so a
       // successful outcome without text is still an open side question.
-      const settled = outcome !== null && (failed || answer !== '')
+      const settled = outcome !== null && (failed || answer !== '' || reasoning !== '')
       const pending = !settled
       const foldable = settled
       const open = toggled === null ? true : toggled
       const state = pending ? 'running' : failed ? 'error' : 'done'
+      const [reasoningOpen, setReasoningOpen] = React.useState(false)
 
       const blocks = React.useMemo(() => {
         if (answer === '') return []
@@ -468,6 +540,10 @@ window.__ModuleLoader__.load({
 
       const toggle = React.useCallback(() => {
         setToggled((value) => !(value === null ? true : value))
+      }, [])
+
+      const toggleReasoning = React.useCallback(() => {
+        setReasoningOpen((value) => !value)
       }, [])
 
       return h(
@@ -492,6 +568,24 @@ window.__ModuleLoader__.load({
           ? h(
               'div',
               { className: 'dshBtw-body', 'data-error': failed ? 'true' : undefined },
+              reasoning === ''
+                ? null
+                : h(
+                    'div',
+                    { className: 'dshBtw-reasoning' },
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'dshBtw-reasoningToggle',
+                        'aria-expanded': reasoningOpen,
+                        onClick: toggleReasoning,
+                      },
+                      REASONING_CHEVRON,
+                      h('span', null, translate('btw.reasoning')),
+                    ),
+                    reasoningOpen ? h('div', { className: 'dshBtw-reasoningBody' }, reasoning) : null,
+                  ),
               blocks === null
                 ? h('pre', { className: 'dshBtw-code' }, answer)
                 : renderBlocks(blocks, 'b'),

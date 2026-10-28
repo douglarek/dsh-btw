@@ -3,6 +3,7 @@ import test from 'node:test'
 import { DetachedAnswers } from '../lib/answer-runner.js'
 import { BTW_USAGE, createBtwCommandDefinition, handleBtwInvocation } from '../lib/command.js'
 import { resolveConfig } from '../lib/config.js'
+import { decodeResult } from '../lib/result-text.js'
 import { resolveRoute } from '../lib/side-question.js'
 
 const ROUTE = Object.freeze({ config: { provider: 'tokenhub', model: 'deepseek-v4.1-flash-1017' } })
@@ -183,7 +184,7 @@ test('assistant transcript messages satisfy the runtime source contract', async 
   assert.equal(assistants, 1)
 })
 
-test('ignores reasoning deltas and reports a truncated answer', async () => {
+test('carries the reasoning and reports a truncated answer', async () => {
   const { runtime } = fakeRuntime({
     stream: () =>
       streamFrom([
@@ -196,7 +197,10 @@ test('ignores reasoning deltas and reports a truncated answer', async () => {
   handleBtwInvocation(runtime, invocation(agent, 'what is WBC?'))
   await runtime.answers.whenIdle()
   assert.equal(appended[0].data.kind, 'success')
-  assert.equal(appended[0].data.text, "WBC is a blood count.\n\n(The answer stopped at the model's token limit.)")
+  assert.match(appended[0].data.text, /^<<<btw:reasoning>>>\nthinking out loud\n<<<btw:answer>>>\n\n/)
+  const { reasoning, answer } = decodeResult(appended[0].data.text)
+  assert.equal(reasoning, 'thinking out loud')
+  assert.equal(answer, "WBC is a blood count.\n\n(The answer stopped at the model's token limit.)")
 })
 
 test('turns a provider failure into a readable row error', async () => {

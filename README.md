@@ -14,6 +14,7 @@ The command surface follows Grok Build's `/btw` (`crates/codegen/xai-grok-pager/
 - The row appears immediately with the question and `Answering…`, then shows the answer. The composer clears as soon as the command is admitted, not when the model replies.
 - The answer is written by the session's current provider and model. By default the question is standalone (`context: none`); `context: session` also sends the conversation.
 - Answers render Markdown: headings, lists, quotes, tables, fenced code, inline code, bold, italic, links.
+- When the model reasons before answering, the row carries a collapsible **Thinking** block above the answer, so the aside shows the work it did at the inherited thinking level.
 - The summary line is a disclosure control like the host's own Turn row: the question ellipsizes to one line, the chevron flips, and a click anywhere on the line folds the answer away or brings it back. Fenced code keeps its line breaks in its own block.
 - `Esc`, drafting, and the queue are untouched: a second question, a follow-up prompt, or a running turn all continue independently.
 
@@ -68,6 +69,7 @@ Every key has a code default; the values in `cordis.patch.yml` are those default
 - `/btw` must start the message. Grok also hoists a mid-message `/btw` and treats the rest of the line as the side question; the Harness command plane only resolves a command at byte zero, so `fix the retry loop. /btw why?` is sent as an ordinary prompt.
 - The answer arrives in one piece. The command plane settles a handler once, so the row cannot stream tokens.
 - Delivery is a second `command/done` for the originating `commandId` (the executor already logged one when the handler returned). The Chat command node folds it into the existing row; readers that expect exactly one `command/done` per run will see two.
+- The lifecycle carries one `text` string, so a row with reasoning stores it inline between `<<<btw:reasoning>>>` and `<<<btw:answer>>>` marker lines (`lib/result-text.js`). The row parser reads them; the shipped generic command card, which does not, would show the markers as text.
 - Tool use, images, and plan-mode side requests are out of scope: the side request declares no tools and sends text only.
 - A side question started from a session that has never sent a request needs `provider` and `model` in the config, because there is no route to inherit yet.
 - The `/` list draws a glyph and a localized title only for the six first-party definition ids in `dsh-client-ui-commands`' `HOST_FACES` table; any other Host command renders its name plus this plugin's `description`. A third-party command cannot add an icon there, and a client-side command contribution — which could — takes no arguments, so `/btw <question>` would stop working.
