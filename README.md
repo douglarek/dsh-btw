@@ -21,9 +21,10 @@ The answer is not a model message and is not part of the next request. It is rec
 
 ## Install
 
-From a DeepSeek Harness profile:
+From a DeepSeek Harness profile, either form works — the published spec, or a local checkout:
 
 ```text
+plugin_manager install_bundle  target=github:douglarek/dsh-btw
 plugin_manager install_bundle  target=/absolute/path/to/dsh-btw
 ```
 
