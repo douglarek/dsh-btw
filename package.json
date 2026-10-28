@@ -1,0 +1,61 @@
+{
+  "name": "dsh-btw",
+  "version": "0.1.0",
+  "description": "Side questions for DeepSeek Harness: /btw answers without interrupting the running turn, using the session's own model and conversation.",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "LICENSE",
+    "index.js",
+    "client.js",
+    "lib/",
+    "locale/*.json",
+    "icon.svg",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  },
+  "scripts": {
+    "check": "node scripts/check.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "btw",
+    "side-question"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/douglarek/dsh-btw.git"
+  },
+  "homepage": "https://github.com/douglarek/dsh-btw#readme",
+  "bugs": {
+    "url": "https://github.com/douglarek/dsh-btw/issues"
+  }
+}

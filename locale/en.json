@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Side Questions",
+    "description": "Ask the current session's model a side question with /btw while the main task keeps running. The answer appears in its own row and never enters the model's conversation."
+  }
+}

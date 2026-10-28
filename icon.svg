@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Side questions">
+  <defs>
+    <linearGradient id="btw-bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7cd7d"/>
+      <stop offset="1" stop-color="#d9862a"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#btw-bg)"/>
+  <path d="M20 17h24a7 7 0 0 1 7 7v13a7 7 0 0 1-7 7H31l-8 7v-7h-3a7 7 0 0 1-7-7V24a7 7 0 0 1 7-7z" fill="#1b2431"/>
+  <circle cx="27" cy="30.5" r="2.6" fill="#f7cd7d"/>
+  <circle cx="34" cy="30.5" r="2.6" fill="#f7cd7d"/>
+  <circle cx="41" cy="30.5" r="2.6" fill="#f7cd7d"/>
+  <path d="M24 24.5h16" stroke="#f7cd7d" stroke-width="2.4" stroke-linecap="round" opacity="0.75"/>
+</svg>

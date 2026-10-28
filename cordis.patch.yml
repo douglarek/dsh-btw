@@ -1,0 +1,27 @@
+# dsh-btw bundle: insert the Host plugin row.
+#
+# The row uses the package name, so the Loader resolves this bundle from the
+# profile that installs it. Every option below has a code default; the listed
+# values are the defaults, kept here as a starting point for overrides.
+- insert:
+    - id: dsh-btw
+      name: 'dsh-btw'
+      config:
+        enabled: true
+        # Menu copy under the composer's "/" list. The client renders a
+        # third-party Host command's catalog description as-is, so this is where
+        # the wording and language come from; replace it with a single language
+        # when the deployment is monolingual.
+        description: '旁问：不打断当前任务地提问 · Ask a side question without interrupting'
+        # What the side request may see: "none" asks a standalone question;
+        # "session" prepends the conversation transcript (bounded below).
+        context: none
+        # Characters of conversation transcript sent with the side question.
+        maxContextChars: 12000
+        # Per-tool-result cap inside that transcript.
+        maxToolResultChars: 1200
+        includeToolResults: true
+        # Side request tuning; provider/model/reasoningEffort stay unset to
+        # follow the session's own route and the adapter defaults.
+        timeoutMs: 120000
+        temperature: 0.2
